@@ -1,0 +1,94 @@
+###############################
+# 通用操作系统文件（建议保留）
+###############################
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*.bak
+*.tmp
+*.log
+
+###############################
+# Java / Gradle / Spring Boot
+###############################
+
+# Gradle 缓存和构建输出
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+# 日志文件目录
+logs/
+
+# Spring Boot devtools 临时文件
+.spring-boot-devtools.properties
+
+###############################
+# IntelliJ IDEA
+###############################
+.idea
+*.iws
+*.iml
+*.ipr
+out/
+!**/src/main/**/out/
+!**/src/test/**/out/
+
+###############################
+# STS (Spring Tool Suite)
+###############################
+.apt_generated/
+.classpath
+.factorypath
+.project
+.settings/
+.springBeans
+.sts4-cache/
+bin/
+!**/src/main/**/bin/
+!**/src/test/**/bin/
+
+###############################
+# NetBeans
+###############################
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+###############################
+# VS Code
+###############################
+
+###############################
+# Vue / 前端项目
+###############################
+
+*.local
+.eslintcache
+.stylelintcache
+
+# Node 包缓存
+node_modules
+
+# 构建产物（Vue build）
+dist
+
+###############################
+# 测试覆盖率/报告等工具文件
+###############################
+coverage/
+lcov-report/
+jacoco.exec
+*.ec
+test-output/
+
+###############################
+# 系统性忽略
+###############################
+# 忽略 HELP.md（可选）
+HELP.md

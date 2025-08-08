@@ -1,0 +1,60 @@
+# --------------------
+# 通用换行符规范
+# --------------------
+* text=auto
+
+# 强制脚本为 LF（Unix 风格，适配 Linux/macOS）
+*.sh text eol=lf
+*.kt text eol=lf
+*.java text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.vue text eol=lf
+*.ts text eol=lf
+*.js text eol=lf
+*.json text eol=lf
+*.html text eol=lf
+*.css text eol=lf
+*.scss text eol=lf
+
+# Windows 批处理文件使用 CRLF
+*.bat text eol=crlf
+gradlew.bat text eol=crlf
+
+# gradlew 和 shell 脚本始终使用 LF
+gradlew text eol=lf
+
+# --------------------
+# 二进制文件（禁用 diff）
+# --------------------
+*.jar binary
+*.zip binary
+*.exe binary
+*.dll binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+
+# --------------------
+# GitHub 语言统计优化
+# --------------------
+# 忽略依赖目录和构建目录
+node_modules/** linguist-vendored
+dist/** linguist-vendored
+build/** linguist-vendored
+out/** linguist-vendored
+
+# --------------------
+# 合并策略（可选）
+# --------------------
+# package-lock.json / pnpm-lock.yaml 用 union 合并
+package-lock.json merge=union
+pnpm-lock.yaml merge=union
+
+# --------------------
+# LFS 示例（若用 Git LFS 可启用）
+# --------------------
+# *.psd filter=lfs diff=lfs merge=lfs -text

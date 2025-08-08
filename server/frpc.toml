@@ -1,0 +1,13 @@
+serverAddr = "8.134.170.8"
+serverPort = 7000
+
+[auth]
+method = "token"
+token = "60d8a83c544e6168db"
+
+[[proxies]]
+name = "1234_tcp_proxy"
+type = "tcp"
+localIP = "localhost"
+localPort = 8080
+remotePort = 15060
