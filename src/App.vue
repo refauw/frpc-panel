@@ -69,15 +69,58 @@ import WebSocketManager from "./utils/websocket";
 
 const server = ref("8.134.170.8");
 const port = ref("7000");
-const token = ref("abcdef123456");
 const status = ref("运行中");
+
+const token = ref(localStorage.getItem("token") || "");
+
+const showLoginModal = ref(!token.value);
 const showServiceModal = ref(false);
 
 const tcpConfigs = ref([
   { name: "df_tcp_abc", local: "127.0.0.1:8080", remote: "8.134.170.8:15060" },
 ]);
 
-const socket = WebSocketManager.getInstance("http://0.0.0.0:5000");
+// const socket = WebSocketManager.getInstance("http://0.0.0.0:5000");
+
+let socket = null;
+
+const connectSocket = () => {
+  socket = WebSocketManager.getInstance("http://0.0.0.0:5000", {
+    auth: { token: token.value }
+  });
+
+  socket.subscribe("server_status", (data) => {
+    console.log("服务器状态:", data);
+  });
+
+  socket.subscribe("auth_error", (msg) => {
+    Message.error("登录已失效，请重新登录");
+    token.value = "";
+    localStorage.removeItem("token");
+    socket.disconnect();
+    showLoginModal.value = true;
+  });
+};
+
+const handleLogin = () => {
+  // 假设调用后端登录接口获取 token
+  fetch("/api/login", { method: "POST", body: JSON.stringify({ username, password }) })
+    .then(res => res.json())
+    .then(data => {
+      if (data.token) {
+        token.value = data.token;
+        localStorage.setItem("token", data.token);
+        showLoginModal.value = false;
+        connectSocket();
+      } else {
+        Message.error("登录失败");
+      }
+    });
+};
+
+onMounted(() => {
+
+
 
 const handleServerStatus = (data) => {
   console.log("服务器状态:", data);
@@ -85,8 +128,11 @@ const handleServerStatus = (data) => {
 };
 
 onMounted(() => {
-  socket.subscribe("server_status", handleServerStatus);
-  socket.send("subscribe", { topic: "server_status" });
+  if (token.value) {
+    connectSocket();
+  }
+  // socket.subscribe("server_status", handleServerStatus);
+  // socket.send("subscribe", { topic: "server_status" });
 });
 
 onUnmounted(() => {
