@@ -7,7 +7,7 @@ import os
 
 # ===== 配置区 =====
 SECRET_KEY = 'secret!'
-PORT = 50001
+PORT = 5000
 PUSH_INTERVAL = 1  # 推送间隔秒
 ALLOW_ORIGINS = "*"  # 允许跨域来源
 # =================
@@ -70,8 +70,8 @@ def send_server_status():
 
 if __name__ == '__main__':
     # 避免 Flask debug 双进程重复启动任务
-    if os.environ.get("WERKZEUG_RUN_MAIN") == "true" or not app.debug:
-        socketio.start_background_task(send_server_status)
+    # if os.environ.get("WERKZEUG_RUN_MAIN") == "true" or not app.debug:
+        # socketio.start_background_task(send_server_status)
 
     # 判断环境自动选择启动方式
     if os.environ.get("ENV") == "production":

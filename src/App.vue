@@ -71,7 +71,7 @@ const server = ref("8.134.170.8");
 const port = ref("7000");
 const status = ref("运行中");
 
-const token = ref(localStorage.getItem("token") || "");
+const token = ref(localStorage.getItem("token") || "tk123123");
 
 const showLoginModal = ref(!token.value);
 const showServiceModal = ref(false);
@@ -86,7 +86,7 @@ let socket = null;
 
 const connectSocket = () => {
   socket = WebSocketManager.getInstance("http://0.0.0.0:5000", {
-    auth: { token: token.value }
+    token: token.value
   });
 
   socket.subscribe("server_status", (data) => {
@@ -118,19 +118,16 @@ const handleLogin = () => {
     });
 };
 
-onMounted(() => {
-
-
-
 const handleServerStatus = (data) => {
   console.log("服务器状态:", data);
   // 你可以更新响应式数据
 };
 
 onMounted(() => {
-  if (token.value) {
-    connectSocket();
-  }
+  // if (token.value) {
+  //   connectSocket();
+  // }
+  connectSocket();
   // socket.subscribe("server_status", handleServerStatus);
   // socket.send("subscribe", { topic: "server_status" });
 });

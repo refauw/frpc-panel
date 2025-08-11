@@ -7,6 +7,7 @@ interface WebSocketOptions {
   maxReconnectAttempts?: number;
   reconnectInterval?: number;
   heartbeatInterval?: number;
+  token?: string;
 }
 
 class WebSocketManager {
