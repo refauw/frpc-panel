@@ -53,7 +53,7 @@
     </div>
 
     <!-- 运行信息 -->
-    <div class="info-block">
+    <div class="info-block" v-if="false">
       <div class="info-subtitle">运行信息</div>
       <div>
         启动时间：<strong>{{ serverInfo.startTime }}</strong>
@@ -67,7 +67,7 @@
     </div>
 
     <!-- 资源监控 -->
-    <div class="info-block">
+    <div class="info-block" v-if="false">
       <div class="info-subtitle">资源监控</div>
 
       <div class="progress-label">CPU 使用率</div>
@@ -138,6 +138,7 @@ const start = () => emit("start");
 const stop = () => emit("stop");
 const restart = () => emit("restart");
 const addTcp = () => emit("addTcp");
+
 </script>
 
 <style scoped>

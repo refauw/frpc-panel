@@ -6,8 +6,15 @@ method = "token"
 token = "60d8a83c544e6168db"
 
 [[proxies]]
-name = "1234_tcp_proxy"
+name = "11_tcp_proxy"
 type = "tcp"
 localIP = "localhost"
 localPort = 8080
 remotePort = 15060
+
+[[proxies]]
+name = "22_tcp_proxy"
+type = "tcp"
+localIP = "localhost"
+localPort = 9090
+remotePort = 15061

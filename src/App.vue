@@ -3,10 +3,10 @@
   <div class="layout-container">
     <Sidebar
       :server-info="{
-        server: '192.168.1.8',
-        port: '7000',
-        token: 'abc123',
-        status: '运行中',
+        server: data.info.serverAddr,
+        port: data.info.serverPort,
+        token: data.info.token,
+        status: data.status,
         startTime: '2025-08-07 09:00',
         connectionCount: 23,
         uptime: '6小时12分钟',
@@ -21,39 +21,46 @@
         diskPercent: 46,
       }"
       @edit="showServiceModal = true"
-      @start="startService"
-      @stop="stopService"
-      @restart="restartService"
-      @add-tcp="addEntry"
-      @save-config="saveConfig"
+      @start="startFrpcServer"
+      @stop="stopFrpcServer"
+      @restart="restartFrpcServer"
+      @add-tcp="openTcpAdd"
     />
-    <div class="content">
+    <div class="content" v-if="true">
       <h3 style="margin-bottom: 1rem">TCP 配置项</h3>
       <div class="tcp-grid">
         <TcpCard
-          v-for="(cfg, idx) in tcpConfigs"
+          v-for="(cfg, idx) in data.proxies"
           :key="idx"
           :config="cfg"
-          @update="(val) => updateEntry(idx, val)"
-          @delete="() => removeEntry(idx)"
+          :server-addr="data.info.serverAddr"
+          @update="() => openTcpEdit(idx)"
+          @delete="() => removeTcpEntry(idx)"
         />
       </div>
     </div>
 
+    <tcp-config-form-modal
+      v-model:visible="showTcpModal"
+      :mode="tcpModalMode"
+      :formData="editTcpData"
+      @save="handleTcp"
+    />
+
     <a-modal
       v-model:visible="showServiceModal"
       title="编辑服务信息"
-      @ok="saveServiceInfo"
+      @ok="handleSaveServerInfo"
     >
-      <a-form layout="vertical">
-        <a-form-item label="服务器地址">
-          <a-input v-model="server" />
+      <a-form :model="data.editInfo" layout="vertical">
+        <a-form-item label="服务器地址" name="serverAddr">
+          <a-input v-model="data.editInfo.serverAddr" />
         </a-form-item>
-        <a-form-item label="端口">
-          <a-input v-model="port" />
+        <a-form-item label="端口" name="serverPort">
+          <a-input v-model="data.editInfo.serverPort" />
         </a-form-item>
-        <a-form-item label="Token">
-          <a-input v-model="token" />
+        <a-form-item label="Token" name="token">
+          <a-input v-model="data.editInfo.token" />
         </a-form-item>
       </a-form>
     </a-modal>
@@ -66,47 +73,124 @@ import TcpCard from "./components/TcpCard.vue";
 import Sidebar from "./components/Sidebar.vue";
 import { Message } from "@arco-design/web-vue";
 import WebSocketManager from "./utils/websocket";
+import TcpConfigFormModal from "./components/TcpConfigFormModal.vue";
+import { cloneDeep } from "lodash/lang.js";
 
-const server = ref("8.134.170.8");
-const port = ref("7000");
-const status = ref("运行中");
+const data = ref({
+  status: "-",
+  info: { serverAddr: "-", serverPort: "-", token: "-" },
+  editInfo: { serverAddr: "", serverPort: "", token: "" },
+  proxies: [
+    {
+      name: "df_tcp_abc",
+      localIP: "127.0.0.1",
+      localPort: "8080",
+      remotePort: "15060",
+      type: "tcp",
+    },
+  ],
+});
 
-const token = ref(localStorage.getItem("token") || "tk123123");
+const showTcpModal = ref(false);
+const tcpModalMode = ref("add");
+const editTcpData = ref({});
+
+function openTcpAdd() {
+  tcpModalMode.value = "add";
+  editTcpData.value = {};
+  showTcpModal.value = true;
+}
+
+function openTcpEdit(index) {
+  tcpModalMode.value = "edit";
+  editTcpData.value = { ...data.value.proxies[index], index };
+  showTcpModal.value = true;
+}
+
+function removeTcpEntry(index) {
+  data.value.proxies.splice(index, 1);
+}
+
+function handleTcp(newCfg) {
+  if (newCfg.mode === "add") {
+    data.value.proxies.push({
+      name: newCfg.name,
+      local: newCfg.local,
+      remote: newCfg.remote,
+    });
+  } else if (newCfg.mode === "edit") {
+    const idx = newCfg.index;
+    data.value.proxies[idx] = {
+      name: newCfg.name,
+      local: newCfg.local,
+      remote: newCfg.remote,
+    };
+  }
+  showTcpModal.value = false;
+  Message.success(newCfg.mode === "add" ? "添加成功" : "编辑成功");
+}
+
+// const token = ref(localStorage.getItem("token") || "tk123123");
+const token = ref("tk123123");
 
 const showLoginModal = ref(!token.value);
 const showServiceModal = ref(false);
 
-const tcpConfigs = ref([
-  { name: "df_tcp_abc", local: "127.0.0.1:8080", remote: "8.134.170.8:15060" },
-]);
-
-// const socket = WebSocketManager.getInstance("http://0.0.0.0:5000");
-
 let socket = null;
 
 const connectSocket = () => {
-  socket = WebSocketManager.getInstance("http://0.0.0.0:5000", {
-    token: token.value
+  socket = WebSocketManager.getInstance("http://localhost:5050", {
+    token: token.value,
   });
 
-  socket.subscribe("server_status", (data) => {
-    console.log("服务器状态:", data);
+  socket.send("subscribe", { channels: ["status", "info", "tcp", "logs"] });
+
+  // 订阅后端推送
+  socket.subscribe("status", (_data) => {
+    data.value.status = _data.status;
+    console.log("📊 服务器状态:", _data);
+    Message.success("服务状态变更：" + _data.status);
   });
 
-  socket.subscribe("auth_error", (msg) => {
-    Message.error("登录已失效，请重新登录");
-    token.value = "";
-    localStorage.removeItem("token");
-    socket.disconnect();
-    showLoginModal.value = true;
+  socket.subscribe("info", (_data) => {
+    data.value.info = _data;
+    data.value.editInfo = cloneDeep(_data);
+    console.log("📊 INFP 配置项:", _data);
+    Message.success("服务信息内容变更：" + _data);
   });
+
+  socket.subscribe("tcp", (_data) => {
+    data.value.proxies = _data;
+    console.log("📊 TCP 配置项:", _data);
+    Message.success("服务信息内容变更：" + _data);
+  });
+};
+
+const handleSaveServerInfo = () => {
+  socket.send("control_frpc", {
+    action: "save_conf",
+    data: data.value.editInfo,
+  });
+};
+
+const startFrpcServer = () => {
+  socket.send("control_frpc", { action: "start" });
+};
+const stopFrpcServer = () => {
+  socket.send("control_frpc", { action: "stop" });
+};
+const restartFrpcServer = () => {
+  socket.send("control_frpc", { action: "restart" });
 };
 
 const handleLogin = () => {
   // 假设调用后端登录接口获取 token
-  fetch("/api/login", { method: "POST", body: JSON.stringify({ username, password }) })
-    .then(res => res.json())
-    .then(data => {
+  fetch("/api/login", {
+    method: "POST",
+    body: JSON.stringify({ username, password }),
+  })
+    .then((res) => res.json())
+    .then((data) => {
       if (data.token) {
         token.value = data.token;
         localStorage.setItem("token", data.token);
@@ -118,68 +202,13 @@ const handleLogin = () => {
     });
 };
 
-const handleServerStatus = (data) => {
-  console.log("服务器状态:", data);
-  // 你可以更新响应式数据
-};
-
 onMounted(() => {
-  // if (token.value) {
-  //   connectSocket();
-  // }
-  connectSocket();
-  // socket.subscribe("server_status", handleServerStatus);
-  // socket.send("subscribe", { topic: "server_status" });
+  if (token.value) {
+    connectSocket();
+  }
 });
 
-onUnmounted(() => {
-  socket.unsubscribe("server_status", handleServerStatus);
-});
-
-const addEntry = () => {
-  tcpConfigs.value.push({
-    name: "tcp_" + Math.random().toString(36).substring(2, 7),
-    local: "127.0.0.1:8080",
-    remote: "8.8.8.8:10000",
-  });
-};
-
-const removeEntry = (index) => tcpConfigs.value.splice(index, 1);
-
-const editEntry = (index) => {
-  const item = tcpConfigs.value[index];
-  const newName = prompt("修改名称", item.name);
-  if (newName !== null) tcpConfigs.value[index].name = newName;
-};
-
-const saveConfig = () => {
-  console.log("保存配置:", tcpConfigs.value);
-  Message.success("配置已保存");
-};
-
-const startService = () => {
-  status.value = "运行中";
-  Message.success("服务已启动");
-};
-const stopService = () => {
-  status.value = "已停止";
-  Message.success("服务已停止");
-};
-const restartService = () => {
-  status.value = "重启中";
-  setTimeout(() => {
-    status.value = "运行中";
-    Message.success("服务已重启");
-  }, 1000);
-};
-
-const saveServiceInfo = () => {
-  showServiceModal.value = false;
-  Message.success("服务信息已保存");
-};
-const updateEntry = (index, newData) => {
-  tcpConfigs.value[index] = { ...tcpConfigs.value[index], ...newData };
-};
+onUnmounted(() => {});
 </script>
 
 <style scoped>
@@ -188,9 +217,11 @@ const updateEntry = (index, newData) => {
   gap: 2rem;
   padding: 2rem;
 }
+
 .content {
   flex: 1;
 }
+
 .tcp-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));

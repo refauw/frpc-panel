@@ -1,90 +1,103 @@
 # coding=utf-8
-# -*- coding: utf-8 -*-
-# vim: set file encoding=utf-8
-
 import psutil
 import time
 import platform
 import os
 
-# pip install psutil
-
-# podman run --rm --pid=host --net=host --ipc=host --privileged my_image
-
 def format_bytes(size):
-    # 转换为 MB 或 GB 显示
+    """将字节数转换成人类可读的单位（B/KB/MB/GB/TB/PB）"""
     for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
         if size < 1024:
             return f"{size:.2f} {unit}"
         size /= 1024
+    return f"{size:.2f} PB"
 
+def detect_environment():
+    """检测运行环境：容器 / Mac / Linux"""
+    if os.path.exists("/.dockerenv") or os.path.exists("/run/.containerenv"):
+        return "container"
+    if platform.system() == "Darwin":
+        return "mac"
+    return "linux"
 
 def get_cpu_info():
-    print("📌 CPU 信息")
-    print(f"  物理核心数: {psutil.cpu_count(logical=False)}")
-    print(f"  逻辑核心数: {psutil.cpu_count(logical=True)}")
-    print(f"  当前 CPU 使用率: {psutil.cpu_percent(interval=1)}%")
-    print()
-
+    """获取 CPU 信息（核心数、使用率）"""
+    return {
+        "physical_cores": psutil.cpu_count(logical=False),
+        "logical_cores": psutil.cpu_count(logical=True),
+        "cpu_percent": psutil.cpu_percent(interval=0.5)
+    }
 
 def get_memory_info():
-    print("📌 内存信息")
+    """获取内存信息（总量、已用、可用、占用率）"""
     mem = psutil.virtual_memory()
-    print(f"  总内存: {format_bytes(mem.total)}")
-    print(f"  已用内存: {format_bytes(mem.used)}")
-    print(f"  可用内存: {format_bytes(mem.available)}")
-    print(f"  内存使用率: {mem.percent}%")
-    print()
-
+    return {
+        "total": format_bytes(mem.total),
+        "used": format_bytes(mem.used),
+        "available": format_bytes(mem.available),
+        "percent": mem.percent
+    }
 
 def get_disk_info():
-    print("📌 磁盘信息")
-    disk = psutil.disk_usage('/')
-    print(f"  总容量: {format_bytes(disk.total)}")
-    print(f"  已用: {format_bytes(disk.used)}")
-    print(f"  可用: {format_bytes(disk.free)}")
-    print(f"  使用率: {disk.percent}%")
-    print()
-
+    """获取磁盘信息（总量、已用、可用、占用率）"""
+    mount_path = "/"
+    if detect_environment() == "container" and os.path.exists("/app"):
+        mount_path = "/app"
+    disk = psutil.disk_usage(mount_path)
+    return {
+        "mount": mount_path,
+        "total": format_bytes(disk.total),
+        "used": format_bytes(disk.used),
+        "free": format_bytes(disk.free),
+        "percent": disk.percent
+    }
 
 def get_network_info():
-    print("📌 网络信息")
-    net = psutil.net_io_counters()
-    print(f"  已发送: {format_bytes(net.bytes_sent)}")
-    print(f"  已接收: {format_bytes(net.bytes_recv)}")
-    print()
-
+    """获取网络流量（发送 / 接收字节数），只取常用接口"""
+    net_io = psutil.net_io_counters(pernic=True)
+    valid_ifaces = ["eth0", "en0", "lo", "lo0"]
+    stats = {}
+    for iface, counters in net_io.items():
+        if any(iface.startswith(v) for v in valid_ifaces):
+            stats[iface] = {
+                "sent": format_bytes(counters.bytes_sent),
+                "recv": format_bytes(counters.bytes_recv)
+            }
+    return stats
 
 def get_system_info():
-    print("📌 系统信息")
-    print(f"  系统平台: {platform.system()} {platform.release()}")
-    print(f"  启动时间: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(psutil.boot_time()))}")
-    print()
-
+    """获取系统信息（平台、启动时间、运行环境）"""
+    return {
+        "platform": f"{platform.system()} {platform.release()}",
+        "boot_time": time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(psutil.boot_time())),
+        "environment": detect_environment()
+    }
 
 def get_current_process_info():
-    print("📌 当前进程信息")
+    """获取当前进程信息（PID、占用内存、CPU 百分比）"""
     proc = psutil.Process(os.getpid())
-    print(f"  进程 PID: {proc.pid}")
-    print(f"  内存使用: {format_bytes(proc.memory_info().rss)}")
-    print(f"  CPU 占用: {proc.cpu_percent(interval=1)}%")
-    print()
+    return {
+        "pid": proc.pid,
+        "memory": format_bytes(proc.memory_info().rss),
+        "cpu_percent": proc.cpu_percent(interval=0.5)
+    }
 
+def get_server_status():
+    """
+    统一封装的服务器状态获取方法
+    可直接用于 Flask-SocketIO / FastAPI WebSocket 返回
+    """
+    return {
+        "system": get_system_info(),
+        "cpu": get_cpu_info(),
+        "memory": get_memory_info(),
+        "disk": get_disk_info(),
+        "network": get_network_info(),
+        "process": get_current_process_info(),
+        "timestamp": time.strftime('%Y-%m-%d %H:%M:%S')
+    }
 
-def main():
-    print("=" * 40)
-    print("🎯 系统资源监控工具")
-    print("=" * 40)
-
-    get_system_info()
-    get_cpu_info()
-    get_memory_info()
-    get_disk_info()
-    get_network_info()
-    get_current_process_info()
-
-    print("=" * 40)
-
-
+# 示例调用
 if __name__ == '__main__':
-    main()
+    import json
+    print(json.dumps(get_server_status(), indent=2, ensure_ascii=False))

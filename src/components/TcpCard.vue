@@ -2,73 +2,37 @@
   <div class="frp-card">
     <!-- 操作按钮 -->
     <div class="frp-actions">
-      <icon-edit @click="showModal = true" class="arco-icon-hover" />
+      <icon-edit @click="$emit('update')" class="arco-icon-hover" />
       <icon-delete @click="$emit('delete')" class="arco-icon-hover" />
     </div>
 
     <!-- 标题 -->
     <div class="frp-title">
-      <span class="frp-type-badge">tcp</span>
+      <span class="frp-type-badge">{{config.type}}</span>
       {{ config.name }}
     </div>
 
     <!-- 地址信息，每行一项 -->
     <div class="frp-info-line">
       <span class="frp-address-label">内网：</span>
-      <span class="frp-address-value">{{ config.local }}</span>
+      <span class="frp-address-value">{{ config.localIP }}:{{ config.localPort }}</span>
     </div>
     <div class="frp-info-line">
       <span class="frp-address-label">映射地址：</span>
-      <span class="frp-address-value">{{ config.remote }}</span>
+      <span class="frp-address-value">http://{{serverAddr}}:{{ config.remotePort }}</span>
     </div>
-
-    <!-- 编辑 Modal -->
-    <a-modal v-model:visible="showModal" title="编辑 TCP 配置" @ok="saveEdit">
-      <a-form layout="vertical">
-        <a-form-item label="名称">
-          <a-input v-model="editData.name" />
-        </a-form-item>
-        <a-form-item label="内网地址">
-          <a-input v-model="editData.local" />
-        </a-form-item>
-        <a-form-item label="映射地址">
-          <a-input v-model="editData.remote" />
-        </a-form-item>
-      </a-form>
-    </a-modal>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, watch } from "vue";
 import { IconEdit, IconDelete } from "@arco-design/web-vue/es/icon";
 
-const props = defineProps({
+defineProps({
+  serverAddr: String,
   config: Object,
 });
-const emit = defineEmits(["update", "delete"]);
 
-const showModal = ref(false);
-const editData = reactive({
-  name: "",
-  local: "",
-  remote: "",
-});
-
-watch(
-  () => props.config,
-  (val) => {
-    editData.name = val.name;
-    editData.local = val.local;
-    editData.remote = val.remote;
-  },
-  { immediate: true }
-);
-
-const saveEdit = () => {
-  emit("update", { ...editData });
-  showModal.value = false;
-};
+defineEmits(["update", "delete"]);
 </script>
 
 <style scoped>
